@@ -6,6 +6,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController; // Add this line to import the ServiceController
 use App\Http\Controllers\UserController; // Add this line to import the ServiceController
 use App\Http\Controllers\RoleController; // Add this line to import the ServiceController
+use App\Http\Controllers\EmployeeController; // Add this line to import the ServiceController
+use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\BookingController;
+
+
 
 
 
@@ -22,7 +27,8 @@ use App\Http\Controllers\RoleController; // Add this line to import the ServiceC
 */
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/services/count', [ServiceController::class, 'getServiceCount']);
 Route::get('/users/count', [UserController::class, 'getUserCount']);
 Route::get('/services', [ServiceController::class, 'index']);
@@ -34,7 +40,11 @@ Route::put('/services/{id}', [ServiceController::class, 'update']);
 Route::post('/services', [ServiceController::class,'store']);
 Route::get('/employees', [UserController::class, 'getEmployees']);
 Route::post('/employees/assign-service', [UserController::class, 'assignService']);
-
+Route::get('/employees_services', [EmployeeController::class, 'index']);
+Route::post('/assign-service', [AssignmentController::class, 'assignServiceToEmployee']);
+Route::get('/available-employees', [BookingController::class, 'getAvailableEmployees']);
+Route::post('/bookings', [BookingController::class, 'store']);
+Route::get('/bookings/employee', [BookingController::class, 'getEmployeeBookings']);
 
 
 
