@@ -36,6 +36,7 @@ class AuthController extends Controller
         }
     }
 
+
     public function logout(Request $request)
     {
         // Revoke the token used for authentication

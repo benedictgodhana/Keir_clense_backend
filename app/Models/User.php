@@ -45,6 +45,9 @@ class User extends Authenticatable
     ];
 
 
+    public function employees()
+    {
+        return $this->roles()->where('name', 'employee');
+    }
 
-    
 }

@@ -9,11 +9,8 @@ use App\Http\Controllers\RoleController; // Add this line to import the ServiceC
 use App\Http\Controllers\EmployeeController; // Add this line to import the ServiceController
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\BookingController;
-
-
-
-
-
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\PaymentTransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +42,9 @@ Route::post('/assign-service', [AssignmentController::class, 'assignServiceToEmp
 Route::get('/available-employees', [BookingController::class, 'getAvailableEmployees']);
 Route::post('/bookings', [BookingController::class, 'store']);
 Route::get('/bookings/employee', [BookingController::class, 'getEmployeeBookings']);
+Route::get('/fetchbookings', [BookingController::class, 'fetchBookings']);
+Route::get('/reviews', [ReviewController::class, 'index']);
+Route::get('/payment-transactions', [PaymentTransactionController::class, 'index']);
 
 
 

@@ -15,29 +15,28 @@ class BookingController extends Controller
 
 public function store(Request $request)
 {
-    // Check if the user is authenticated
-    if (!Auth::check()) {
-        return response()->json(['error' => 'Unauthenticated'], 401);
-    }
-
-    $validatedData = $request->validate([
-        'date' => 'required|date',
-        'time' => 'required',
+       // Validate the incoming request data
+       $validatedData = $request->validate([
+        'service_id' => 'required',
+        'user_id'=>'required',
+        'employee_id' => 'required',
+        'date_time' => 'required|date',
         'location' => 'required',
-        'selectedProvider' => 'required',
         // Add more validation rules as needed
     ]);
 
-    try {
-        // Get the authenticated user
-        $user = Auth::user();
 
-        // Create a new booking record associated with the authenticated user
+
+    try {
+
+        // Create a new booking record
         $booking = Booking::create([
-            'date' => $validatedData['date'],
-            'time' => $validatedData['time'],
+            'user_id' => $validatedData['user_id'], // Assuming the user is authenticated
+            'service_id' => $validatedData['service_id'],
+            'employee_id' => $validatedData['employee_id'],
+            'date_time' => $validatedData['date_time'],
             'location' => $validatedData['location'],
-            'user_id' => $user->id, // Assign the user ID to the booking
+            'status' => 'pending', // Assuming the initial status is 'pending'
             // Add more fields as needed
         ]);
 
@@ -48,9 +47,7 @@ public function store(Request $request)
         return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
     }
 }
-
-
-    public function getAvailableEmployees(Request $request)
+public function getAvailableEmployees(Request $request)
 {
     // Validate the incoming request (optional)
     $request->validate([
@@ -63,14 +60,23 @@ public function store(Request $request)
     // Query the database to find available employees for the selected service
     $availableEmployees = Employee::whereHas('service', function ($query) use ($selectedService) {
         $query->where('name', $selectedService);
-    })->with('user')->get();
+    })->with('user', 'service:id,name')->get();
 
-    // Extract user names from available employees
-    $userNames = $availableEmployees->pluck('user.name');
+    // Extract employee names, IDs, and service name
+    $employeeData = $availableEmployees->map(function ($employee) use ($selectedService) {
+        return [
+            'employee_id' => $employee->id,
+            'employee_name' => $employee->user->name,
+            'service_id' => $employee->service->id,
+            'service_name' => $selectedService,
+        ];
+    });
 
-    // Return the list of available employee names
-    return response()->json($userNames);
+    // Return the list of available employees with names, IDs, and service name
+    return response()->json($employeeData);
 }
+
+
 public function getEmployeeBookings()
 {
     // Check if there is an authenticated user
@@ -103,6 +109,31 @@ public function getEmployeeBookings()
         return response()->json(['error' => 'Unauthenticated'], 401);
     }
 }
+public function fetchBookings()
+{
+    // Fetch all bookings with related models and their status
+    $bookings = Booking::with('user', 'service', 'employee')->get();
+
+    // Transform the bookings data to include status names instead of IDs
+    $formattedBookings = $bookings->map(function ($booking) {
+        // Retrieve employee name based on employee_id
+        $employeeName = User::find($booking->employee_id)->name;
+
+        return [
+            'customerName' => $booking->user->name,
+            'employeeName' => $employeeName,
+            'serviceName' => $booking->service->name,
+            'status' => $booking->status, // Assuming the status name is accessible through the relationship
+            'location' => $booking->location,
+            // Add more fields as needed
+        ];
+    });
+
+    // Return the formatted bookings as JSON response
+    return response()->json($formattedBookings);
+}
+
+
 
 }
 
