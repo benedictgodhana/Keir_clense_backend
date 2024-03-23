@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Service;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Employee;
+
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
@@ -68,6 +71,7 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'role' => 'required|string|exists:roles,name',
             'password' => 'required|string|min:8',
+            'service_id' => 'required_if:role,employee|exists:services,id', // Validate service ID only if the role is employee
             // Add more validation rules for other fields if needed
         ]);
 
@@ -86,18 +90,39 @@ class UserController extends Controller
         // Assign the role to the user
         $user->assignRole($validatedData['role']);
 
+        // If the role is employee, associate the user with the service
+        if ($validatedData['role'] === 'employee') {
+            // Find the service
+            $service = Service::findOrFail($validatedData['service_id']);
+
+            // Create an employee record and associate the user with the service
+            $employee = Employee::create([
+                'user_id' => $user->id,
+                'service_id' => $service->id,
+            ]);
+        }
+
         // Return a success response with the created user
         return response()->json(['user' => $user], 201);
     }
 
     public function getEmployees()
-    {
-        // Fetch users with the role name "employee"
-        $employees = User::role('employee')->get(['id', 'name', 'email']);
+{
+    // Fetch users with the role "employee" and eager load their associated services
+    $employees = User::role('employee')->with('services')->get()->map(function ($user) {
+        // Simplify the service information, if needed
+        $user->services = $user->services->map(function ($service) {
+            return [
+                'id' => $service->id,
+                'name' => $service->name
+            ];
+        });
+        return $user;
+    });
 
-        // Return the response
-        return response()->json(['employees' => $employees]);
-    }
+    return response()->json(['employees' => $employees]);
+}
+
 
     public function assignService(Request $request)
     {
@@ -110,5 +135,16 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Service assigned successfully']);
     }
+
+    public function countCustomers()
+{
+    // Assuming the role name is 'employee'
+    $customerCount = User::role('customer')->count();
+
+    // Return the count as a JSON response
+    return response()->json([
+        'customer_count' => $customerCount,
+    ]);
+}
 
 }

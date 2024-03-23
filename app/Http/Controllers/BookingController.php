@@ -12,41 +12,45 @@ use Illuminate\Support\Facades\Auth;
 class BookingController extends Controller
 {
 
-
 public function store(Request $request)
 {
-       // Validate the incoming request data
-       $validatedData = $request->validate([
+    // Validate the incoming request data
+    $validatedData = $request->validate([
         'service_id' => 'required',
-        'user_id'=>'required',
-        'employee_id' => 'required',
+        'user_id' => 'required', // Assuming you pass the user ID of the customer
+        'employee_id' => 'required', // Assuming you pass the user ID of the employee
         'date_time' => 'required|date',
         'location' => 'required',
         // Add more validation rules as needed
     ]);
 
-
-
     try {
+        // Check if the provided employee ID belongs to a user with the "employee" role
+        $employee = User::findOrFail($validatedData['employee_id']);
+
+        if (!$employee->hasRole('employee')) {
+            throw new \Exception('The selected employee does not have the role of "employee".');
+        }
 
         // Create a new booking record
         $booking = Booking::create([
-            'user_id' => $validatedData['user_id'], // Assuming the user is authenticated
+            'user_id' => $validatedData['user_id'],
             'service_id' => $validatedData['service_id'],
             'employee_id' => $validatedData['employee_id'],
             'date_time' => $validatedData['date_time'],
             'location' => $validatedData['location'],
-            'status' => 'pending', // Assuming the initial status is 'pending'
+            'status' => 'pending',
             // Add more fields as needed
         ]);
 
         // Return a success response
         return response()->json(['message' => 'Booking created successfully', 'booking' => $booking], 201);
     } catch (\Exception $e) {
-        // Handle any exceptions, such as database errors
+        // Handle any exceptions, such as database errors or invalid employee ID
         return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
     }
 }
+
 public function getAvailableEmployees(Request $request)
 {
     // Validate the incoming request (optional)
@@ -132,6 +136,101 @@ public function fetchBookings()
     // Return the formatted bookings as JSON response
     return response()->json($formattedBookings);
 }
+
+public function history(Request $request)
+{
+    // Check if the user is authenticated
+    if (Auth::check()) {
+        // Retrieve authenticated user
+        $user = Auth::user();
+
+        // Fetch booking history for the authenticated user
+        $bookings = Booking::where('user_id', $user->id)->get();
+
+        // Iterate through each booking to replace employee IDs with names
+        $bookings->transform(function ($booking) {
+            // Retrieve the employee's name using the employee ID
+            $employee = User::whereHas('roles', function ($query) {
+                $query->where('name', 'employee');
+            })->find($booking->employee_id);
+
+            if ($employee) {
+                // If employee found, replace the ID with the name
+                $booking->employee_name = $employee->name;
+            } else {
+                // If employee not found, set the name as null
+                $booking->employee_name = null;
+            }
+
+            // Retrieve the service name using the service ID
+            $service = Service::find($booking->service_id);
+
+            if ($service) {
+                // If service found, replace the ID with the name
+                $booking->service_name = $service->name;
+                $booking->service_price = $service->price;
+
+            } else {
+                // If service not found, set the name as null
+                $booking->service_name = null;
+            }
+
+            // Remove the employee_id and service_id fields from the JSON response
+            unset($booking->employee_id);
+            unset($booking->service_id);
+
+            return $booking;
+        });
+
+        // Return the modified bookings data as JSON response
+        return response()->json($bookings);
+    } else {
+        // User is not authenticated, return an error response
+        return response()->json(['error' => 'Unauthenticated'], 401);
+    }
+}
+
+public function Employeehistory(Request $request)
+{
+    // Check if the user is authenticated
+    if (Auth::check()) {
+        // Retrieve authenticated user
+        $user = Auth::user();
+
+        // Check if the authenticated user is an employee
+        if ($user->hasRole('employee')) {
+            // Fetch booking history for the authenticated employee
+            $bookings = Booking::with(['user', 'service'])
+                ->where('employee_id', $user->id)
+                ->get();
+
+            // Transform the bookings data to include user name and service name
+            $bookings->transform(function ($booking) {
+                // Add user name and service name to the booking data
+                $booking->customer_name = $booking->user->name;
+                $booking->service_name = $booking->service->name;
+                $booking->service_price = $booking->service->price;
+
+
+                // Remove the user and service relationships from the booking object
+                unset($booking->user);
+                unset($booking->service);
+
+                return $booking;
+            });
+
+            // Return the bookings data as JSON response
+            return response()->json($bookings);
+        } else {
+            // If the authenticated user is not an employee, return an error response
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    } else {
+        // User is not authenticated, return an error response
+        return response()->json(['error' => 'Unauthenticated'], 401);
+    }
+}
+
 
 
 

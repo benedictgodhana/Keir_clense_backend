@@ -9,6 +9,12 @@ class Employee extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'service_id'
+        // Add other fillable fields as needed
+    ];
+
     public function service()
     {
         return $this->belongsTo(Service::class);

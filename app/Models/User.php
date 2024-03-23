@@ -50,4 +50,15 @@ class User extends Authenticatable
         return $this->roles()->where('name', 'employee');
     }
 
+    public function users()
+    {
+        return $this->belongsToMany(User::class); // As above, customize if needed.
+    }
+
+    public function services()
+    {
+        // Replace 'pivot_table_name' with your actual table name, e.g., 'employee_service'
+        return $this->belongsToMany(Service::class, 'employees', 'user_id', 'service_id');
+    }
+
 }

@@ -14,4 +14,11 @@ class Service extends Model
     {
         return $this->hasMany(Employee::class);
     }
+
+
+    public function service()
+{
+    return $this->belongsTo(Service::class); // Replace Service::class with the actual name of your service model
+}
+
 }

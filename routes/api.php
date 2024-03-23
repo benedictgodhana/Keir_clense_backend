@@ -11,6 +11,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PaymentTransactionController;
+use App\Models\Employee;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,9 +46,23 @@ Route::get('/bookings/employee', [BookingController::class, 'getEmployeeBookings
 Route::get('/fetchbookings', [BookingController::class, 'fetchBookings']);
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/payment-transactions', [PaymentTransactionController::class, 'index']);
+Route::get('/services/{service_id}/employees', [EmployeeController::class,'getEmployeesByService']);
+Route::get('/user/booking-history', [BookingController::class, 'getUserBookingHistory']);
+Route::middleware('auth:sanctum')->get('/bookings/history', [BookingController::class, 'history']);
+Route::middleware('auth:sanctum')->get('/bookings/Employeehistory', [BookingController::class, 'Employeehistory']);
+Route::get('/employees/count', [EmployeeController::class, 'countEmployees']);
+Route::get('/customers/count', [UserController::class, 'countCustomers']);
+Route::get('/get_services', [EmployeeController::class, 'fetchServices']);
+
+
+
+
+
 
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+
+
     return $request->user();
 });

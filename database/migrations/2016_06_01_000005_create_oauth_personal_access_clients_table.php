@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->foreignId('employee_id')->constrained('users')->onDelete('cascade')->after('user_id');
+        Schema::create('oauth_personal_access_clients', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('client_id');
+            $table->timestamps();
         });
     }
 
@@ -21,9 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->dropForeign(['employee_id']);
-            $table->dropColumn('employee_id');
-        });
+        Schema::dropIfExists('oauth_personal_access_clients');
     }
 };
