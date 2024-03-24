@@ -7,49 +7,78 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\Employee;
+use App\Notifications\BookingNotificationForUser;
+use App\Notifications\BookingNotificationForEmployee;
+use App\Notifications\BookingNotification;
 use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
 
-public function store(Request $request)
-{
-    // Validate the incoming request data
-    $validatedData = $request->validate([
-        'service_id' => 'required',
-        'user_id' => 'required', // Assuming you pass the user ID of the customer
-        'employee_id' => 'required', // Assuming you pass the user ID of the employee
-        'date_time' => 'required|date',
-        'location' => 'required',
-        // Add more validation rules as needed
-    ]);
-
-    try {
-        // Check if the provided employee ID belongs to a user with the "employee" role
-        $employee = User::findOrFail($validatedData['employee_id']);
-
-        if (!$employee->hasRole('employee')) {
-            throw new \Exception('The selected employee does not have the role of "employee".');
-        }
-
-        // Create a new booking record
-        $booking = Booking::create([
-            'user_id' => $validatedData['user_id'],
-            'service_id' => $validatedData['service_id'],
-            'employee_id' => $validatedData['employee_id'],
-            'date_time' => $validatedData['date_time'],
-            'location' => $validatedData['location'],
-            'status' => 'pending',
-            // Add more fields as needed
+    public function store(Request $request)
+    {
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'service_id' => 'required',
+            'user_id' => 'required', // Assuming you pass the user ID of the customer
+            'employee_id' => 'required', // Assuming you pass the user ID of the employee
+            'date_time' => 'required|date',
+            'location' => 'required',
+            // Add more validation rules as needed
         ]);
 
-        // Return a success response
-        return response()->json(['message' => 'Booking created successfully', 'booking' => $booking], 201);
-    } catch (\Exception $e) {
-        // Handle any exceptions, such as database errors or invalid employee ID
-        return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
+        try {
+            // Create a new booking record
+            $booking = Booking::create([
+                'user_id' => $validatedData['user_id'],
+                'service_id' => $validatedData['service_id'],
+                'employee_id' => $validatedData['employee_id'],
+                'date_time' => $validatedData['date_time'],
+                'location' => $validatedData['location'],
+                'status' => 'pending',
+                // Add more fields as needed
+            ]);
+
+            // Notify the employee about the booking
+            $this->notifyEmployee($booking);
+
+            // Notify the user who made the booking
+            $this->notifyUser($booking);
+
+            // Return a success response
+            return response()->json(['message' => 'Booking created successfully', 'booking' => $booking], 201);
+        } catch (\Exception $e) {
+            // Handle any exceptions, such as database errors or invalid employee ID
+            return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
+        }
     }
-}
+
+    protected function notifyEmployee(Booking $booking)
+    {
+        // Get the employee who needs to be notified about the booking
+        $employee = User::findOrFail($booking->employee_id);
+
+        // Pass the employee's name to the notification
+        $employeeName = $employee->name;
+
+        // Send notification to the employee, passing the booking and employee's name
+        $employee->notify(new BookingNotificationForEmployee($booking, $employeeName));
+    }
+
+    protected function notifyUser($booking)
+    {
+        // Get the user who made the booking
+        $user = $booking->user;
+
+        // Get the employee user with the role name "employee"
+        $employee = User::whereHas('roles', function ($query) {
+            $query->where('name', 'employee');
+        })->first();
+
+        // Notify the user about the booking, passing the booking and employee name
+        $user->notify(new BookingNotificationForUser($booking, $employee->name));
+    }
+
 
 public function getAvailableEmployees(Request $request)
 {
@@ -75,6 +104,8 @@ public function getAvailableEmployees(Request $request)
             'service_name' => $selectedService,
         ];
     });
+
+
 
     // Return the list of available employees with names, IDs, and service name
     return response()->json($employeeData);
@@ -208,6 +239,7 @@ public function Employeehistory(Request $request)
             $bookings->transform(function ($booking) {
                 // Add user name and service name to the booking data
                 $booking->customer_name = $booking->user->name;
+                $booking->customer_email = $booking->user->email;
                 $booking->service_name = $booking->service->name;
                 $booking->service_price = $booking->service->price;
 
