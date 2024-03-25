@@ -9,14 +9,8 @@ class Booking extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'service_id',
-        'employee_id',
-        'date_time',
-        'location',
-        'status',
-    ];
+    protected $fillable = ['user_id', 'service_id', 'employee_id', 'date_time', 'location', 'contact', 'payment_method', 'status'];
+
 
     // Define the relationship with the User model
     public function user()

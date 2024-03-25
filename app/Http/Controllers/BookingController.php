@@ -20,12 +20,24 @@ class BookingController extends Controller
         // Validate the incoming request data
         $validatedData = $request->validate([
             'service_id' => 'required',
-            'user_id' => 'required', // Assuming you pass the user ID of the customer
-            'employee_id' => 'required', // Assuming you pass the user ID of the employee
+            'user_id' => 'required',
+            'employee_id' => 'required',
             'date_time' => 'required|date',
             'location' => 'required',
+            'contact' => 'required', // Add validation for contact
+            'payment_method' => 'required', // Add validation for payment method
             // Add more validation rules as needed
         ]);
+
+        // Check if the selected employee is already booked at the specified date and time
+        $existingBooking = Booking::where('employee_id', $validatedData['employee_id'])
+                                    ->where('date_time', $validatedData['date_time'])
+                                    ->first();
+
+        if ($existingBooking) {
+            // If an existing booking is found, return an error response
+            return response()->json(['error' => 'Employee is already booked at this time. Please select another time.'], 400);
+        }
 
         try {
             // Create a new booking record
@@ -35,6 +47,8 @@ class BookingController extends Controller
                 'employee_id' => $validatedData['employee_id'],
                 'date_time' => $validatedData['date_time'],
                 'location' => $validatedData['location'],
+                'contact' => $validatedData['contact'], // Assign the contact
+                'payment_method' => $validatedData['payment_method'], // Assign the payment method
                 'status' => 'pending',
                 // Add more fields as needed
             ]);
@@ -52,6 +66,7 @@ class BookingController extends Controller
             return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
         }
     }
+
 
     protected function notifyEmployee(Booking $booking)
     {
