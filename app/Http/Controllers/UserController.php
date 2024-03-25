@@ -147,4 +147,16 @@ class UserController extends Controller
     ]);
 }
 
+
+public function destroy($id)
+{
+    // Find user
+    $user = User::findOrFail($id);
+
+    // Delete user
+    $user->delete();
+
+    return response()->json(null, 204);
+}
+
 }
