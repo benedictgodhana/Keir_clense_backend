@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\Employee;
+use App\Models\PaymentTransaction;
 use App\Notifications\BookingNotificationForUser;
 use App\Notifications\BookingNotificationForEmployee;
 use App\Notifications\BookingNotification;
@@ -55,6 +56,15 @@ class BookingController extends Controller
                 // Add more fields as needed
             ]);
 
+            // Create a new payment transaction record
+            $payment = PaymentTransaction::create([
+                'booking_id' => $booking->id,
+                'amount' => $booking->service->price, // Assuming the service price is stored in the service table
+                'payment_method' => $validatedData['payment_method'],
+                'status' => 'pending', // Initial status of payment transaction
+                // Add more fields as needed
+            ]);
+
             // Notify the employee about the booking
             $this->notifyEmployee($booking);
 
@@ -62,7 +72,7 @@ class BookingController extends Controller
             $this->notifyUser($booking);
 
             // Return a success response
-            return response()->json(['message' => 'Booking created successfully', 'booking' => $booking], 201);
+            return response()->json(['message' => 'Booking created successfully', 'booking' => $booking, 'payment' => $payment], 201);
         } catch (\Exception $e) {
             // Handle any exceptions, such as database errors or invalid employee ID
             return response()->json(['error' => 'Failed to create booking', 'message' => $e->getMessage()], 500);
