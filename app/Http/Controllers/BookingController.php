@@ -11,6 +11,7 @@ use App\Notifications\BookingNotificationForUser;
 use App\Notifications\BookingNotificationForEmployee;
 use App\Notifications\BookingNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class BookingController extends Controller
 {
@@ -25,8 +26,8 @@ class BookingController extends Controller
             'date_time' => 'required|date',
             'location' => 'required',
             'contact' => 'required', // Add validation for contact
-            'payment_method' => 'required', // Add validation for payment method
-            // Add more validation rules as needed
+            'payment_method' => 'required',
+            'comments' => 'nullable|string|max:255', // Validation for comments, allowing it to be nullable
         ]);
 
         // Check if the selected employee is already booked at the specified date and time
@@ -50,6 +51,7 @@ class BookingController extends Controller
                 'contact' => $validatedData['contact'], // Assign the contact
                 'payment_method' => $validatedData['payment_method'], // Assign the payment method
                 'status' => 'pending',
+                'comments' => $validatedData['comments'] ?? null, // Assign the comments, if provided
                 // Add more fields as needed
             ]);
 
@@ -257,6 +259,8 @@ public function Employeehistory(Request $request)
                 $booking->customer_email = $booking->user->email;
                 $booking->service_name = $booking->service->name;
                 $booking->service_price = $booking->service->price;
+                $booking->comment = $booking->comments;
+
 
 
                 // Remove the user and service relationships from the booking object
@@ -278,7 +282,41 @@ public function Employeehistory(Request $request)
     }
 }
 
+public function update(Request $request, $id)
+{
+    // Validate incoming request data
+    $validator = Validator::make($request->all(), [
+        'comments' => 'nullable|string',
+        'status' => 'required|string',
+    ]);
 
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
+    }
+
+    try {
+        // Attempt to find the booking, but use `find` instead of `findOrFail` to manually handle not found
+        $booking = Booking::find($id);
+
+        // Check if booking was found
+        if (!$booking) {
+            return response()->json(['error' => 'Booking not found'], 404);
+        }
+
+        // Update booking details
+        $booking->comments = $request->comments ?? $booking->comments; // Only update if provided
+        $booking->status = $request->status;
+
+        // Save the changes
+        $booking->save();
+
+        // Return a success response
+        return response()->json(['message' => 'Booking updated successfully', 'booking' => $booking], 200);
+    } catch (\Exception $e) {
+        // Handle any other exceptions
+        return response()->json(['error' => 'Booking update failed', 'message' => $e->getMessage()], 500);
+    }
+}
 
 
 }
