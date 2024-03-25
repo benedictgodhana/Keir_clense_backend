@@ -29,4 +29,29 @@ class PaymentTransactionController extends Controller
         // Return the transformed data as JSON response
         return response()->json(['transactions' => $transformedTransactions], 200);
     }
+
+
+    public function update($id, Request $request)
+    {
+        // Find the payment transaction by its ID
+        $paymentTransaction = PaymentTransaction::find($id);
+
+        if (!$paymentTransaction) {
+            // If the payment transaction is not found, return a 404 response
+            return response()->json(['error' => 'Payment transaction not found'], 404);
+        }
+
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'status' => 'required|in:Pending,Confirmed,Failed',
+            'transaction_id' => 'required|string|max:255',
+            // Add validation rules for other fields if needed
+        ]);
+
+        // Update the payment transaction with the validated data
+        $paymentTransaction->update($validatedData);
+
+        // Return a success response
+        return response()->json(['message' => 'Payment transaction updated successfully', 'paymentTransaction' => $paymentTransaction]);
+    }
 }
